@@ -1,0 +1,44 @@
+#!/bin/bash
+function SIG {
+	case $1 in
+		"+") echo -en "\n\e[1;34m [\e[0m\e[1;32;1m+\e[0m\e[1;34m] $2\e[0m" ;;
+		"-") echo -en "\n\e[1;34m [\e[0m\e[1;31;1m-\e[0m\e[1;34m] $2\e[0m" ;;
+		">") echo -en "\n\e[1;34m [\e[0m\e[1;37;1m>\e[0m\e[1;34m] $2\e[0m" ;;
+		".") echo -en "\n\e[1;34m [\e[0m\e[1;35;1m.\e[0m\e[1;34m] $2\e[0m" ;;
+		"err") SIG "-"; echo -en "\e[5;31mERRO $2\e[0m" ;;
+		"ok")  SIG "+"; ;;
+		*)	   echo -en "\e[1;34m [\e[0m\e[1;37;1m$1\e[0m\e[1;34m] $2\e[0m"
+	esac
+}
+function instalar {
+    comando1="sudo curl -O $2 -o $PWD/$1"
+    comando2="sudo chmod +x $PWD/$1"
+	if ! [[ $(eval $comando1) || $(eval $comando2) ]] ; then
+		SIG "err"; echo -en "Link"; SIG "$1" "não instalado";
+	else
+		if ! sudo bash "$PWD/$1" ; then
+			SIG "err"; echo -en "Durante instalação $1";fi
+
+	fi
+	#[[ -a $1 ]] && sudo rm "$PWD/$1"
+
+}
+function continuo {
+	msgm="$1"
+	[ -z "$1" ] &&	msgm="Continuar"
+	SIG ">";echo -en "\e[1;32m$msgm \e[0m[y/n/pular][Padrao: n]? "
+	read -t15 -n1 opsao
+	[[ "$opsao" = "y" || "$opsao" = "Y" ]] &&	return 0
+	[[ "$opsao" = "p" || "$opsao" = "P" ]] &&	return 1
+	exit 1
+}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SIG ".";echo -en "Instalando Apps..\t"
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if continuo ;then
+	instalar "office" "https://github.com/fabriciobuttbutt/novorepositorio/blob/b0c77947d60e77f44ac09360ccff0674e8dc4d58/s_install_office"
+fi
+if continuo ;then
+	instalar "geral" "https://github.com/fabriciobuttbutt/novorepositorio/blob/b0c77947d60e77f44ac09360ccff0674e8dc4d58/s_install_geral"
+fi
+SIG ".";echo -en "Instalação Finalizada!!"

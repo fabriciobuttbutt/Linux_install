@@ -1,0 +1,245 @@
+#!/bin/bash
+function SIG {
+	case $1 in
+		"+") echo -en "\n\e[1;34m [\e[0m\e[1;32;1m+\e[0m\e[1;34m] \e[0m" ;;
+		"-") echo -en "\n\e[1;34m [\e[0m\e[1;31;1m-\e[0m\e[1;34m] \e[0m" ;;
+		">") echo -en "\n\e[1;34m [\e[0m\e[1;37;1m>\e[0m\e[1;34m] \e[0m" ;;
+		".") echo -en "\n\e[1;34m [\e[0m\e[1;35;1m.\e[0m\e[1;34m] \e[0m" ;;
+		"err") SIG "-"; echo -en "\e[5;31mERRO \e[0m" ;;
+		"ok")  SIG "+"; ;;
+		*)	   echo -en "\n\e[1;34m [\e[0m\e[1;37;1m \e[0m\e[1;34m] \e[0m"
+	esac
+}
+
+function fixx {
+	sudo apt --fix-broken install -y
+	sudo apt install -y --fix-missing
+}
+function escreve(){ # [comando][endereço da pasta] [arquivo] [texto]
+	text=$4
+	case $1 in
+		"escrever")		$( echo -e "$text" | sudo tee -a "$2$3" )	;;
+		"substituir")	$( echo -e "$text" | sudo tee "$2$3" )	;;
+		*)	SIG "err";echo -en " na escolha da operação [linha 26]."; exit 1;
+	esac
+
+	SIG ".";echo -en "\e[1;32mAtual repositorio:\e[0m\n"
+	sudo cat "$2$3"
+	SIG ".";echo -en "\e[1;32mapt-get update:\e[0m"
+		if ! sudo apt-get update;then
+			SIG "err";echo -en " de Update"
+		else
+			SIG "+";echo -en "\e[1;32mapt-get update Atulizado!\e[0m"
+		fi
+}
+
+function opera_repositorio(){  # [comando] [endereço pasta] [arquivo]  [texto]
+	case $1 in
+		"add")	escreve "escrever" $2 $3 $4	;;
+		"off")	texto=$(sudo cat "$2$3")
+				texto=${texto//#/}
+				texto=${texto//"deb"/"#deb"}
+				escreve "substituir" $2 $3 "$texto"		;;
+		"show")	SIG ".";echo -en "\n";sudo cat "$2$3"	;;
+		"list")	i=1
+				for ARQ in $( ls $2/ )
+				do
+					lista_repositorio[$i]="$ARQ"
+					echo -en "\n\t$i.${lista_repositorio[$i]}"
+					i=$(($i+1))
+				done	;;
+		*)		SIG "err";echo -en " na escolha da operação [linha 60]."; exit 1;
+	esac
+}
+
+function addRepo { # [enderoço pasta] [texto]
+	nArq=0
+	lista_repositorio=($nArq)
+	opera_repositorio "list" $geral
+	SIG ">"; read -n1 -p "Digite o numero do repositorio:" op_repo
+	arqv_repos=${lista_repositorio[$op_repo]};	echo -e ".\e[1;32m$arqv_repos\e[0m:\n"
+
+	if [ -a  "$1$arqv_repos" ];then
+		opera_repositorio "show" "$1" "$arqv_repos" # [comando] [endereço pasta] [arquivo] [texto]
+		SIG ".";echo -en "Será Adicionado: \e[1;37m$2\e[0m"
+		if continuo "Adicionar ";then
+			escreve "escrever" $1 $arqv_repos $2; fi
+			#[comando] [endereço da pasta] [arquivo] [texto]
+	else
+		SIG ".";echo -en "Repositorio ainda nao existe:\n"
+		if continuo "Criar ";then
+			$(sudo touch "$geral")
+			escreve "substituir" $1 $arqv_repos $2 ;fi
+			#[comando] [endereço da pasta] [arquivo] [texto]
+	fi
+}
+
+
+function instalar {
+	comando="( ! sudo apt install -y $1 )"
+	[[ "$2" = "pip" ]] && comando="( sudo pip install $1 )"
+
+	SIG "+";echo -en "\e[1;0;1mInstalando\e[0m \e[1;32m$1\e[0m:\n"
+	if ! $(eval $comando)
+	then
+		SIG "-";echo -en "\e[5;31mERRO\e[0m"
+		continuo
+	else
+		tput dl1;tput cuu1;
+		SIG ".";echo -en "\e[1;0;1mInstalado com Sucesso!\e[0m\n"
+	fi
+}
+function continuo {
+	msgm="$1"
+	[ -z "$1" ] &&	msgm="Continuar"
+	SIG ">";echo -en "\e[1;32m$msgm \e[0m[y/n/pular][Padrao: n]? "
+	read -t15 -n1 opsao
+	[[ "$opsao" = "y" || "$opsao" = "Y" ]] &&	return 0
+	[[ "$opsao" = "p" || "$opsao" = "P" ]] &&	return 1
+	exit 1
+}
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SIG ".";echo -ne "Atualizando repositórios..\n"
+geral="/etc/apt/sources.list.d/"
+
+opera_repositorio "list" $geral # [comando] [endereço pasta] [arquivo]
+
+echo -e "\n" #${lista_repositorio[@]}\n${lista_repositorio[2]}"
+if continuo ;then
+	fixx
+	if ! sudo apt-get update
+	then
+		SIG "err";echo -en " de Repositorio."
+		exit 1
+	else
+		SIG ".";echo -en "Repositorio OK!"
+		SIG ".";echo -en "Iniciando Atualização..\t"
+		if continuo ;then
+			if ! sudo apt-get dist-upgrade -y
+			then
+				SIG "err";echo -en " de Atualizacao."
+				exit 1
+			else
+				sudo apt autoremove -y
+				SIG ".";echo -en "\e[1;32mAtualizacao OK!\e[0m"
+			fi
+		fi
+	fi
+fi
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SIG ".";echo -en "Instalando Apps..\t"
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SIG ".";echo -en "Instalando App Wine.."
+if continuo "Irá adicionar repositorio. Continuar";then #https://wiki.winehq.org/Debian
+	text_repos="deb http://ftp.de.debian.org/debian bullseye main"
+	addRepo "$geral" "$text_repos" # [enderoço pasta] [text_repos]
+
+	if ! sudo dpkg --print-architecture;then
+			SIG "-";echo -en " na dpkg."; fi
+	if ! sudo dpkg --add-architecture i386;then
+			SIG "-";echo -en " na dpkg."
+	elif ! sudo apt update;then
+			SIG "-";echo -en " no update."; fi
+
+	if continuo "Adicionar Wine";then instalar "wine"; fi
+fi
+
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SIG ".";echo -en "Instalando App OpenDriveR.."
+if continuo "Irá adicionar repositorio. Continuar";then #https://software.opensuse.org/download.html?project=home%3Ajstaf&package=onedriver
+	text_repos="deb http://download.opensuse.org/repositories/home:/jstaf/Debian_10/ /"
+	addRepo "$geral" "$text_repos" # [enderoço pasta] [text_repos]
+
+	if continuo "Instalar chave do repositorio";then
+		comando="(curl -fsSL 'https://download.opensuse.org/repositories/home:jstaf/Debian_10/Release.key' | gpg --dearmor | sudo tee '/etc/apt/trusted.gpg.d/home_jstaf.gpg' > '/dev/null')"
+		if ! $(eval $comando);then
+			SIG "err";echo -en " na chave do Repositorio."
+		elif ! sudo apt update;then
+			SIG "-";echo -en " no update.";	fi
+	fi
+	if continuo "Adicionar OneDriveR";then	instalar "onedriver"; fi
+fi
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if continuo "\e[1;32mDesabilitar\e[0m algum repositorio";
+then
+i=0
+	while [[ i -eq 0 ]]
+	do
+		opera_repositorio "list" $geral # [comando] [endereço pasta] [arquivo] [texto]
+		SIG ">"; read -n1 -p "Digite o numero do repositorio: " op_repo
+		arqv_repos=${lista_repositorio[$op_repo]};	echo -e ".\e[1;32m$arqv_repos\e[0m \n"
+		SIG ">";echo -en "Repositorio \e[1;32m$arqv_repos\e[0m será desabilitado."
+		if  [ -f "$geral$arqv_repos" ] ;then
+			opera_repositorio "show" "$geral" "$arqv_repos"  # [comando] [endereço pasta] [arquivo]  [texto]
+			if continuo "Desabilitar $arqv_repos";then
+				opera_repositorio "off" "$geral" "$arqv_repos"; fi # [comando] [endereço pasta] [arquivo] [texto]
+		else
+			SIG "err";echo -en " Repositorio naõ encontrado. "
+		fi
+
+		i= continuo "Deseja desabilitar algum outro repositorio"
+	done
+fi
+
+pasta_atual=$(pwd)
+REPOend="/usr/games/"
+SIG ".";echo -en "Instalando Scripts.."
+if continuo "Irá adicionar Scripts a \e[1;37m$REPOend\e[0m";
+then
+	cd $REPOend
+	sudo gh repo clone fabriciobuttbutt/novorepositorio/s_git_commit
+	sudo gh repo clone fabriciobuttbutt/novorepositorio/s_myMedia
+	sudo gh repo clone fabriciobuttbutt/novorepositorio/s_ocr_img
+	sudo gh repo clone fabriciobuttbutt/novorepositorio/s_updebian
+	cd $pasta_atual
+	$(dolphin $REPOend)
+fi
+
+
+
+
+
+
+
+
+
+SIG whi ".." "Instalando Apps web.."
+if continuo $padrao;then
+	link="https://drive.google.com/file/d/1Uc1RaI9rmBFdhz6WCq21o5OAuCxSw2TR/view?usp=sharing"
+	link="https://drive.google.com/u/0/uc?id=1Uc1RaI9rmBFdhz6WCq21o5OAuCxSw2TR&export=download"
+	wget -O "$PWD/deb.deb" $link ; sudo dpkg -i "$PWD/deb.deb" ; #sudo rm "$PWD/deb.deb"
+	link="https://drive.google.com/file/d/1gpBfO0OXKgLLBpBnb_hAof8L9FoVVyhN/view?usp=sharing"
+	link="https://drive.google.com/file/d/1jUINiepR4vTzmqRxzY4kjXwM3R6_x6OT/view?usp=sharing"
+	link="https://drive.google.com/file/d/1wZ6GCusHGFk8TSLRtPeS81Mw7t1QXsz2/view?usp=sharing"
+	#$(sudo -u butt firefox --new-window https://www.microsoft.com/pt-br/edge/business/download)
+	#$(sudo -u butt firefox --new-tab https://www.freedownloadmanager.org/download-fdm-for-linux.htm)
+	#$(sudo -u butt firefox --new-tab https://www.microsoft.com/pt-br/microsoft-teams/download-app#desktopAppDownloadregion)
+
+	#$(sudo -u butt firefox --new-tab https://www.balena.io/etcher/)
+
+	#$(sudo -u butt firefox --new-tab https://www.ventoy.net/en/download.html)
+fi
+SIG ".";echo -en "Instalação Finalizada!!"
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#sudo apt install -y qemu-system-x86 qemu qemu-kvm libvirt-daemon libvirt-clients bridge-utils virt-manager
+#sudo apt install -y qemu qemu-kvm libvirt-daemon libvirt-clients bridge-utils virt-manager
+#sudo systemctl enable --now libvirtd
+#lsmod | grep -i kvm
+	#Local de onde ficam os Downloads apt /var/cache/apt/archives/
+	#sudo mousepad /etc/fstab
+	# Arquivos
+	#UUID=278CCF953D2D39C9 /media/butt/Arquivos           ntfs-3g    defaults,uid=1000,gid=1000        0       2
+
+	# ext4NTFS
+	#UUID=490B31C315DE8ABD /media/butt/ext4NTFS           ntfs-3g    defaults,uid=1000,gid=1000        0       2

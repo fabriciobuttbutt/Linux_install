@@ -1,0 +1,117 @@
+#!/bin/bash
+function SIG { #cor] [simbolo] [msgm1] [msgm2]
+	end="\e[0m" ; bef="\n\e[1;34m[$end" ; aft="\e[1;34m]$end"
+	case $1 in
+		"err") cor="\e[1;31;1m" ;;
+		"red") cor="\e[1;31;1m" ;;
+		"gre") cor="\e[1;32;1m" ;;
+		"pur") cor="\e[1;35;1m" ;;
+		"whi") cor="\e[1;37;1m" ;;
+		*)	   bef="\e[1;34m[$end\e[1;37;1m"
+	esac
+	if [ "$1" = "err" ];then
+		echo -en "$bef$cor$2$end$aft\e[5;31m $3$end\e[1;37m $4$end"
+	else
+		echo -en "$bef$cor$2$end$aft\e[1;37m $3$end $4"
+	fi
+}
+
+function fixx {
+	sudo apt --fix-broken install -y
+	sudo apt install -y --fix-missing
+}
+function type_install {
+	case $1 in
+		"dpkg") echo -en "sudo dpkg -i $2" ;;
+		"apt") echo -en "sudo apt install -y $2" ;;
+		"pip") echo -en "sudo pip install $2" ;;
+		*)	   echo -en "sudo apt install -y $2"
+	esac
+}
+function myinstall { #[tipo] [app]
+	case $1 in
+		"dpkg") do_it="dpkg -i $2" ;;
+		"apt") do_it="apt install -y $2" ;;
+		"pip") do_it="pip install $2" ;;
+		*)	   do_it="apt install -y $2"
+	esac
+	SIG whi ".." "Instalando";SIG n "$2" ":\n"
+	if ! sudo $do_it;then
+		SIG err "ERRO" "\n" ;	continuo $padrao
+	else
+		tput dl1;tput cuu1;	SIG gre "+" "Instalado com Sucesso!\n"
+	fi
+}
+function continuo { # [no_ask or padrao] [msgm]
+	if [ "$1" != "no_ask" ];then
+		msgm="$2";[ -z "$2" ] &&	msgm="Continuar"
+		SIG whi ">>" "$msgm" ; SIG n "y/n/pular" "Padrao:$1 ?"
+		read -t15 -n1 opsao
+		[ -z "$opsao" ] &&	opsao="$1"
+		[[ "$opsao" = "y" || "$opsao" = "Y" ]] &&	return 0
+		[[ "$opsao" = "p" || "$opsao" = "P" ]] &&	return 1
+		exit 1
+	fi
+
+}
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SIG whi ">>" "Instalação automatica." "Insira o padrao "; SIG n "y/n/p/no_ask";SIG n "Padrao:n" "?"
+read -t15 -n6 padrao ;[ -z "$padrao" ] &&	padrao="n"
+if continuo $padrao;then
+	echo -en "\n"
+	fixx
+	if ! sudo apt-get update
+	then
+		SIG err "ERRO" "de Repositorio."
+		exit 1
+	else
+		SIG gre "+" "Repositorio OK!"
+		SIG whi ".." "Iniciando Atualização..\n"
+		if continuo $padrao;then
+			if ! sudo apt-get dist-upgrade -y
+			then
+				SIG err "ERRO" "de Atualizacao."
+				exit 1
+			else
+				sudo apt autoremove -y
+				SIG whi ".." "Atualizacao OK!"
+			fi
+		fi
+	fi
+fi
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SIG whi ".." "Instalando Apps..\t"
+if continuo $padrao ;then
+SIG whi ".." "Instalando Ferramentas de  Escritorio..\n"
+	myinstall "apt" "kolourpaint"		#Paint
+	myinstall "apt" "krita" 			#Paint Avancado
+	myinstall "apt" "tesseract-ocr" 	#OCR imagens
+	myinstall "apt" "ocrmypdf" 		#OCR pdf
+	myinstall "apt" "tesseract-ocr-por tesseract-ocr-eng" #portugues pra ocr, osd, all
+	myinstall "apt" "virtualbox" 		#Maquina virtual
+	#myinstall "apt" "anydesk"	# acesso remoto
+	myinstall "apt" "mkisofs"
+	myinstall "apt" "flameshot" 	#print screen
+	myinstall "apt" "mousepad"		#Editor texto
+	myinstall "apt" "cherrytree" 	#Organizador
+	myinstall "apt" "docker*" 		#Conteinerswebcamoid
+	myinstall "apt" "webcamoid" 	#Webcam
+	myinstall "apt" "libreoffice"	#office
+
+	fixx
+	SIG whi ".." "Instalação Finalizada!!"
+fi
+
+geral="/etc/apt/sources.list.d/"
+SIG whi ".." "Instalando App AnyDesk.."
+if continuo $padrao "Irá adicionar repositorio. Continuar";then #http://deb.anydesk.com/howto.html
+	if ! [ -a "$geral" ]; then	sudo touch "$geral";fi
+	echo -en "deb http://deb.anydesk.com/ all main" | tee -a "$geral"
+	comando="(wget -qO - https://keys.anydesk.com/repos/DEB-GPG-KEY | sudo apt-key add -)"
+	if ! $(eval $comando);then
+			SIG err "ERRO";echo -en "na chave do Repositorio."
+		elif ! sudo apt update;then
+			SIG err "ERRO" "no update.";	fi
+	fi
+	if continuo $padrao "Adicionar Anydesk";then	myinstall "anydesk"; fi
+fi
