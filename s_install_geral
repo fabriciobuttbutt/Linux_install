@@ -55,8 +55,12 @@ function continuo { # [no_ask or padrao] [msgm]
 
 }
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-SIG whi ">>" "Instalação automatica." "Insira o padrao "; SIG n "y/n/p/no_ask";SIG n "Padrao:n" "?"
-read -t15 -n6 padrao ;[ -z "$padrao" ] &&	padrao="n"
+if [[ -n "$1" ]];then
+	SIG whi ">>" "Instalação automatica." "Insira o padrao "; SIG n "y/n/p/no_ask";SIG n "Padrao:n" "?"
+	read -t15 -n6 padrao ;[ -z "$padrao" ] &&	padrao="n"
+else
+	padrao="$1"
+if
 if continuo $padrao;then
 	echo -en "\n"
 	fixx

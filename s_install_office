@@ -15,7 +15,6 @@ function SIG { #cor] [simbolo] [msgm1] [msgm2]
 		echo -en "$bef$cor$2$end$aft\e[1;37m $3$end $4"
 	fi
 }
-
 function fixx {
 	sudo apt --fix-broken install -y
 	sudo apt install -y --fix-missing
@@ -55,8 +54,13 @@ function continuo { # [no_ask or padrao] [msgm]
 
 }
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-SIG whi ">>" "Instalação automatica." "Insira o padrao "; SIG n "y/n/p/no_ask";SIG n "Padrao:n" "?"
-read -t15 -n6 padrao ;[ -z "$padrao" ] &&	padrao="n"
+
+if [[ -n "$1" ]];then
+	SIG whi ">>" "Instalação automatica." "Insira o padrao "; SIG n "y/n/p/no_ask";SIG n "Padrao:n" "?"
+	read -t15 -n6 padrao ;[ -z "$padrao" ] &&	padrao="n"
+else
+	padrao="$1"
+if
 if continuo $padrao;then
 	echo -en "\n"
 	fixx
@@ -101,7 +105,6 @@ SIG whi ".." "Instalando Ferramentas de  Escritorio..\n"
 	fixx
 	SIG whi ".." "Instalação Finalizada!!"
 fi
-
 geral="/etc/apt/sources.list.d/"
 SIG whi ".." "Instalando App AnyDesk.."
 if continuo $padrao "Irá adicionar repositorio. Continuar";then #http://deb.anydesk.com/howto.html
@@ -110,8 +113,8 @@ if continuo $padrao "Irá adicionar repositorio. Continuar";then #http://deb.any
 	comando="(wget -qO - https://keys.anydesk.com/repos/DEB-GPG-KEY | sudo apt-key add -)"
 	if ! $(eval $comando);then
 			SIG err "ERRO";echo -en "na chave do Repositorio."
-		elif ! sudo apt update;then
-			SIG err "ERRO" "no update.";	fi
+	elif ! sudo apt update;then
+			SIG err "ERRO" "no update.";
 	fi
 	if continuo $padrao "Adicionar Anydesk";then	myinstall "anydesk"; fi
 fi
