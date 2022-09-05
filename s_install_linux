@@ -15,6 +15,27 @@ function SIG { #cor] [simbolo] [msgm1] [msgm2]
 		echo -en "$bef$cor$2$end$aft\e[1;37m $3$end $4"
 	fi
 }
+
+function fixx {
+	sudo apt autoremove
+	sudo apt --fix-broken install -y
+	sudo apt install -y --fix-missing
+}
+
+function myinstall { #[tipo] [app]
+	case $1 in
+		"dpkg") do_it="dpkg -i $2" ;;
+		"apt") do_it="apt install -y $2" ;;
+		"pip") do_it="pip install $2" ;;
+		*)	   do_it="$1"
+	esac
+	SIG whi ".." "Instalando";SIG n "$2" ":\n"
+	if ! sudo $do_it;then
+		SIG err "ERRO" "\n" ;	continuo $padrao
+	else
+		tput dl1;tput cuu1;	SIG gre "+" "Instalado com Sucesso!\n"
+	fi
+}
 function continuo { # [no_ask or padrao] [msgm]
 	if [ "$1" != "no_ask" ];then
 		msgm="$2";[ -z "$2" ] &&	msgm="Continuar"
@@ -27,25 +48,169 @@ function continuo { # [no_ask or padrao] [msgm]
 	fi
 
 }
-if [[ -n "$1" ]] ;then
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if [ "$1" = "" ];then
 	SIG whi ">>" "Instalação automatica." "Insira o padrao "; SIG n "y/n/p/no_ask";SIG n "Padrao:n" "?"
 	read -t15 -n6 padrao ;[ -z "$padrao" ] &&	padrao="n"
 else
 	padrao="$1"
 fi
-pasta="Linux_install"
+debianList="/etc/apt/sources.list.d/debian.list"
+if ! [ -a "$debianList" ]; then
+	sudo touch "$debianList"
+	echo -en "#deb http://ftp.de.debian.org/debian bullseye main" | sudo tee -a $debianList
+fi
 if continuo $padrao;then
 	echo -en "\n"
-	git clone "https://github.com/fabriciobuttbutt/$pasta.git"
-	sleep 3
-	cd Linux_install
-	if continuo $padrao "Fase Geral. Continuar? ";then
-		comando="sudo bash s_install_geral $padrao"
-		eval $comando;	fi
-	if continuo $padrao "Fase Office. Continuar? ";then
-		comando="sudo bash s_install_office $padrao"
-		eval $comando;	fi
-	cd ..
-	[ -d $pasta ] && rm -rd $pasta
+	fixx
+	if ! sudo apt-get update
+	then
+		SIG err "ERRO" "de Repositorio."
+		exit 1
+	else
+		SIG gre "+" "Repositorio OK!"
+		SIG whi ".." "Iniciando Atualização..\n"
+		if continuo $padrao;then
+			if ! sudo apt-get dist-upgrade -y
+			then
+				SIG err "ERRO" "de Atualizacao."
+				exit 1
+			else
+				sudo apt autoremove -y
+				SIG whi ".." "Atualizacao OK!"
+			fi
+		fi
+	fi
+fi
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SIG whi ".." "Instalando Apps.."
+if continuo $padrao;then
+	SIG whi ".." "Instalando Ferramentas Administrativas..\n"
+	myinstall "apt" "gh" #pip-myinstallernet-tools
+	myinstall "apt" "python3-pip" #pip-myinstallernet-tools
+	myinstall "apt" "net-tools"	# internet tools
+	myinstall "apt" "ethtool"
+	myinstall "apt" "lm-sensors"	# Sensores
+	myinstall "apt" "gparted" 	# Gerencia Discos
+	myinstall "apt" "gpart" 	# Axiliar ao Gparted na recuperação de daos
+	myinstall "apt" "kbackup"		#KDE Backup
+	myinstall "apt" "deja-dup"		#BackUp
+	myinstall "apt" "grub-customizer" #customizar a inicialização
+	myinstall "apt" "stacer"		#Limpesa de disco
+	myinstall "apt" "kdeconnect" 	#KDE complemento
+	myinstall "apt" "clamav" 		#Antivirus
+	myinstall "apt" "curl"
+	myinstall "apt" "nodejs"
+	myinstall "apt" "wget"
+	myinstall "pip" "pyftpdlib"
+	myinstall "apt" "ffmpeg libgdk-pixbuf-xlib-2.0-0 libgdk-pixbuf2.0-0 libgdk-pixbuf2.0-0"
+
+	SIG whi ".." "Instalando";SIG n "Tailscale" ":\n"
+	if ! (sudo curl -fsSL https://tailscale.com/install.sh | sh) ;then
+		SIG err "ERRO" "\n" ;	continuo $padrao
+	else
+		tput dl1;tput cuu1;
+		sudo tailscale up
+		SIG gre "+" "Instalado com Sucesso!\n"
+	fi
+
+
+	SIG whi ".." "Instalação de Ferramentas Administrativas Finalizada!!"
+fi
+
+
+
+if continuo $padrao ;then
+	SIG whi ".." "Instalando Ferramentas de  Escritorio..\n"
+	myinstall "apt" "kolourpaint"		#Paint
+	myinstall "apt" "krita" 			#Paint Avancado
+	myinstall "apt" "tesseract-ocr" 	#OCR imagens
+	myinstall "apt" "ocrmypdf" 		#OCR pdf
+	myinstall "apt" "tesseract-ocr-por tesseract-ocr-eng" #portugues pra ocr, osd, all
+	myinstall "apt" "virtualbox" 		#Maquina virtual
+	myinstall "apt" "qemu-kvm libvirt-clients libvirt-daemon-system bridge-utils"	#lib para virt-manager
+	sudo adduser $USER libvirt && sudo adduser $USER kvm
+	myinstall "apt" "virt-manager" # VM
+	myinstall "apt" "krdc" 		# acesso remoto
+	myinstall "apt" "mkisofs"
+	myinstall "apt" "flameshot" 	#print screen
+	myinstall "apt" "mousepad"		#Editor texto
+	myinstall "apt" "cherrytree" 	#Organizador
+	myinstall "apt" "docker*" 		#Conteinerswebcamoid
+	myinstall "apt" "webcamoid" 	#Webcam
+	myinstall "apt" "libreoffice"	#office
+
+
+	SIG whi ".." "Instalação de Ferramentas de  Escritorio Finalizada!!"
+fi
+
+geral="/etc/apt/sources.list.d/debian.list"
+SIG whi ".." "Instalando App AnyDesk.."
+if continuo $padrao "Irá adicionar repositorio. Continuar";then #http://deb.anydesk.com/howto.html
+	if ! [ -a "$geral" ]; then	sudo touch "$geral" ;fi
+	echo -en "deb http://deb.anydesk.com/ all main" | sudo tee -a "$geral"
+	comando="( wget -qO - https://keys.anydesk.com/repos/DEB-GPG-KEY | sudo apt-key add - )"
+	if ! eval $comando;then
+			SIG err "ERRO";echo -en "na chave do Repositorio."
+	elif ! sudo apt update;then
+			SIG err "ERRO" "no update.";
+	fi
+	if continuo $padrao "Adicionar Anydesk";then	myinstall "apt" "anydesk"; fi
+fi
+SIG whi ".." "Instalando Locais '.deb' .."
+aqui="."
+if continuo $padrao;then
+    if ! ( ls "$aqui/" > '/dev/null' );then
+        SIG "err"; echo -en " no diretorio \e[1;37m$aqui\e[0m"
+        exit
+        fi
+    for ARQ in $( ls $aqui/ )
+        do
+        i="$aqui/$ARQ"
+        if [ -f $i ];
+        then
+            last=$((${#i}-4))
+            if [ "${i:$last:4}" = ".deb" ] ;
+            then
+                myinstall "dpkg" "$i"
+            fi
+        fi
+    done
 
 fi
+
+wake="Wake-on-lan"
+SIG whi ".." "Instalando Script '$wake' .."
+if continuo $padrao;then
+	if ! [ -a "./$wake" ]; then
+        SIG "err"; echo -en " arquivo não existe"
+        exit
+	fi
+    sudo bash "./$wake"
+
+fi
+
+fixx
+echo -e "\n \e[1;34m---------------- | | ----------------\e[1;37;1m"
+echo "Arquivos
+UUID=278CCF953D2D39C9 /media/butt/Arquivos           ntfs-3g    defaults,uid=1000,gid=1000        0       2"
+
+echo "ext4NTFS
+UUID=490B31C315DE8ABD /media/butt/ext4NTFS           ntfs-3g    defaults,uid=1000,gid=1000        0       2"
+
+echo "backup
+UUID=3316E4950B30C431 /media/butt/backup           ntfs-3g    defaults,uid=1000,gid=1000        0       2"
+
+sudo mousepad /etc/fstab
+echo -e "\n \e[1;34m---------------- | | ----------------\e[1;37;1m"
+echo "
+#deb http://ftp.de.debian.org/debian bullseye main
+#deb [arch=amd64] https://debrepo.freedownloadmanager.org/ bionic main
+deb http://deb.anydesk.com/ all main
+deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main
+deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian bullseye main
+deb [arch=amd64] https://packages.microsoft.com/repos/ms-teams stable main
+
+deb [arch=amd64] http://dl.google.com/linux/chrome-remote-desktop/deb/ stable main
+"
+sudo mousepad /etc/apt/sources.list.d/debian.list
