@@ -1,4 +1,5 @@
 #!/bin/bash
+
 function SIG { #cor] [simbolo] [msgm1] [msgm2]
 	end="\e[0m" ; bef="\n\e[1;34m[$end" ; aft="\e[1;34m]$end"
 	case $1 in

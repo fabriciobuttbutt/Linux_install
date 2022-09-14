@@ -1,4 +1,5 @@
 #!/bin/bash
+
 padrao_sem $1 #nao
 
 	SIG whi ".." "Instalando";SIG n "Tailscale" ":\n"

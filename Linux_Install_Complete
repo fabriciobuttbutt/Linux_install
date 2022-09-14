@@ -1,4 +1,5 @@
 #!/bin/bash
+
 function fstab_etc { # []
 	echo -e "# Inseridos Agora #
 #Arquivos
