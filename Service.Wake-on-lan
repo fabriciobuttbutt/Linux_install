@@ -1,0 +1,79 @@
+#!/bin/bash
+padrao_sem $1
+
+function pre_install {
+	SIG whi ".." "Será necessário instalar $1"
+	if continuo; then
+		if ! (sudo apt install "$1");then
+			SIG err "ERRO" "na instalação de $1"
+			exit 1
+		fi
+	else
+		exit 1
+	fi
+}
+
+
+nome="Wake-on-lan.service"
+dir="/etc/systemd/system"
+sudo echo -en "\n"
+SIG whi ".." "Iniciando Wake-on-lan"
+pre_teste ethtool
+
+# mySudo [tipo/comando] [app] [msgm_pre] [msgm_pos] [msgm_erro] [comando erro]
+mySudo	"ethtool eth0 | grep Wake-on" \
+		"ethtool" \
+		"Condição atual:\n" \
+		"" \
+		"Falhaem: ethtool eth0 | grep Wake-on" \
+		"exit 1"
+
+mySudo	"ethtool -s eth0 wol g" \
+		"ethtool" \
+		"Alterando para: On = [g]" \
+		"" \
+		"Falhaem: ethtool -s eth0 wol g" \
+		"exit 1"
+
+mySudo	"ethtool eth0 | grep Wake-on" \
+		"ethtool" \
+		"Novo Estado: " \
+		"" \
+		"Falhaem: ethtool eth0 | grep Wake-on" \
+		"exit 1"
+
+mySudo	"touch $dir/$nome" \
+		"touch" \
+		"Criando $nome " \
+		"" \
+		"Falhaem: touch $dir/$nome" \
+		"exit 1"
+
+texto="[Unit]\n
+Description=Ativa Wake-on-Lan\n
+[Service]\n
+ExecStart=/usr/sbin/ethtool -s eth0 wol g\n
+#User=root\n
+#Restart=always\n
+[Install]\n
+WantedBy=multi-user.target"
+
+mySudo	"echo -e $texto | sudo tee $dir/$nome" \
+		"touch" \
+		"Adicionando a $dir/$nome " \
+		"$2 OK !!" \
+		"Falhaem: echo -e $texto | sudo tee $dir/$nome" \
+		"exit 1"
+
+
+SIG whi ".." "Reiniciando Deamon "
+errou "systemctl daemon-reload"
+
+SIG whi ".." "Ativando ";SIG n "$nome"
+errou  "systemctl enable $nome"
+
+SIG whi ".." "Iniciando ";SIG n "$nome"
+errou "systemctl start $nome"
+
+SIG whi ".." "Atual Status ";SIG n "$nome" "\n"
+echo $(sudo systemctl status $nome | grep -l "$nome" )

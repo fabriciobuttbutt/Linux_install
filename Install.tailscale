@@ -1,0 +1,13 @@
+#!/bin/bash
+padrao_sem $1 #nao
+
+	SIG whi ".." "Instalando";SIG n "Tailscale" ":\n"
+	echo "entrou Tailscale"
+exit 1
+	if ! (sudo curl -fsSL https://tailscale.com/install.sh | sh) ;then
+		SIG err "ERRO" "\n" ;	continuo $padrao
+	else
+		tput dl1;tput cuu1;
+		sudo tailscale up
+		SIG gre "+" "Instalado com Sucesso!\n"
+	fi

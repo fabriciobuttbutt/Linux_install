@@ -1,0 +1,24 @@
+#!/bin/bash
+padrao_sem $1
+mySudo  "systemctl enable docker-desktop" \
+        "enable docker-desktop" \
+        "Ativando servico.." \
+        "Ativado." \
+        "na Ativação de 'docker-desktop'"
+
+mySudo  "systemctl start docker-desktop" \
+        "docker-desktop" \
+        "Starting docker-desktop.." \
+        "Started." \
+        "na Inicialização do 'docker-desktop'"
+mySudo  "docker compose version" \
+        "Compose version" \
+        "Docker-Compose version.." \
+        "" \
+        "em Docker-Compose"
+mySudo  "docker --version" \
+        "Docker version" \
+        "Docker version.." \
+        "" \
+        "em Docker"
+

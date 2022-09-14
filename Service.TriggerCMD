@@ -1,0 +1,48 @@
+#!/bin/bash
+padrao_sem $1
+
+nome="TriggerCMD.service"
+dir="/etc/systemd/system"
+
+pre_teste triggercmdagent
+
+SIG whi ".." "Criando ";SIG n "$nome" "\n"
+sudo touch $dir/$nome
+
+texto="[Unit]\n
+Description=myTRIGGERcmd Agent
+\n
+[Service]
+\n
+ExecStart=/usr/local/sbin/mytriggercmdagent
+\n
+[Install]
+\n
+WantedBy=multi-user.target
+"
+mySudo  "( echo -e $texto | sudo tee $dir/$nome)" \
+        "tee $dir/$nome" \
+        "Inserindo em tee '$dir/$nome'.." \
+        "$2 Inserido." \
+        "em 'tee $dir/$nome'"
+
+mySudo  "systemctl daemon-reload" \
+        "daemon-reload" \
+        "Reiniciando Deamonn.." \
+        "Deamonn Reiniciado." \
+        "em 'systemctl daemon-reload'"
+
+mySudo  "systemctl enable $nome" \
+        "enable $nome" \
+        "Ativando servico.." \
+        "Ativado." \
+        "na Ativação de '$nome'"
+
+mySudo  "systemctl start $nome" \
+        "$nome" \
+        "Starting $nome.." \
+        "Started." \
+        "na Inicialização do '$nome'"
+
+SIG whi ".." "Atual Status ";SIG n "$nome" "\n"
+echo $(sudo systemctl status $nome | grep -l "$nome" )

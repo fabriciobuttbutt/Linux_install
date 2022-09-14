@@ -1,0 +1,365 @@
+#!/bin/bash
+function fstab_etc { # []
+	echo -e "# Inseridos Agora #
+#Arquivos
+UUID=278CCF953D2D39C9 /media/butt/Arquivos           ntfs-3g    defaults,uid=1000,gid=1000        0       2
+\n#ext4NTFS
+UUID=490B31C315DE8ABD /media/butt/ext4NTFS           ntfs-3g    defaults,uid=1000,gid=1000        0       2
+\n#backup
+UUID=3316E4950B30C431 /media/butt/backup           ntfs-3g    defaults,uid=1000,gid=1000        0       2"
+}
+function debian_sources { # []
+	echo -e "# Inseridos Agora #
+#deb http://ftp.de.debian.org/debian bullseye main
+deb [arch=amd64] https://debrepo.freedownloadmanager.org/ bionic main
+deb http://deb.anydesk.com/ all main
+deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main
+deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian bullseye main
+deb [arch=amd64] https://packages.microsoft.com/repos/ms-teams stable main
+deb [arch=amd64] http://dl.google.com/linux/chrome-remote-desktop/deb/ stable main
+deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bullseye stable"
+}
+function padrao_sem {
+	if [ "$1" = "" ];then
+		SIG err "ERRO" "Padrão nao encontrado.\n"
+		padrao="p"
+		SIG whi ".." "Padrao: "; SIG n "$padrao"
+	fi
+}
+function pre_teste {
+	if ! ( which "$1");then
+		SIG err "ERRO" "$1" "Não esta instalado!"
+		exit 1
+	fi
+}
+function fixx {
+	mySudo "apt autoremove -y "
+	mySudo "apt --fix-broken install -y"
+	mySudo "apt --fix-missing install -y"
+	mySudo "apt-get autoclean"
+}
+
+function SIG { #[cor] [simbolo] [msgm1] [msgm2]
+	end="\e[0m" ; bef="\n\e[1;34m[$end" ; aft="\e[1;34m]$end"
+	case $1 in
+		"err") cor="\e[1;31;1m" ;;
+		"red") cor="\e[1;31;1m" ;;
+		"gre") cor="\e[1;32;1m" ;;
+		"pur") cor="\e[1;35;1m" ;;
+		"whi") cor="\e[1;37;1m" ;;
+		*)	   bef="\e[1;34m[$end\e[1;37;1m"
+	esac
+	if [ "$1" = "err" ];then
+		echo -en "$bef$cor$2$end$aft\e[5;31m $3$end\e[1;37m $4$end"
+	else
+		echo -en "$bef$cor$2$end$aft\e[1;37m $3$end $4"
+	fi
+}
+function mySudo { #[tipo/comando] [app] [msgm_pre] [msgm_pos] [msgm_erro] [comando erro]
+	msmg_sucess="Instalado com Sucesso!\n"
+	msgm_err=" em $3 de $2"
+	case $1 in
+		"dpkg") do_it="sudo dpkg -i $2"; 		msmg_pre="Instalando"; msgm_pos="$msmg_sucess" ;;
+		"apt") do_it="sudo apt install -y $2";	msmg_pre="Instalando"; msgm_pos="$msmg_sucess" ;;
+		"apt-get") do_it="sudo apt-get install -y $2";	msmg_pre="Instalando"; msgm_pos="$msmg_sucess" ;;
+		"pip") do_it="sudo pip install $2";		msmg_pre="Instalando"; msmg_pos="$msmg_sucess" ;;
+		*)	   do_it="sudo $1"
+				[ -n "$3" ] && msmg_pre="$3"
+				[ -n "$4" ] && msgm_pos="$4"
+				[ -n "$5" ] && msgm_err="$5"
+	esac
+	if [ -n "$msmg_pre" ]; then # texto anterior se hover
+		SIG whi ".." "$msmg_pre"
+		SIG nnn "$2" ":\n"
+	fi #if ! sudo $do_it;	then # erro se hover
+	if ! eval $do_it;	then # erro se hover
+		SIG err "ERRO" "$msgm_err"
+		[ -n "$6" ] && eval "$6"
+		continuo $padrao
+	else
+		if [ -n "$msgm_pos" ] ; then 	#tput dl1;tput cuu1;
+			SIG gre "+" "$msgm_pos"  # texto POSterior positivo se hover
+		fi
+	fi
+}
+function continuo { # [no_ask or padrao] [msgm]
+	if [ "$1" != "no_ask" ];then
+		msgm="$2";[ -z "$2" ] &&	msgm="Continuar"
+		SIG whi ">>" "$msgm"
+		SIG n "y/n/pular" "Padrao:$1 ?"
+		read -t15 -n1 opsao
+		[ -z "$opsao" ] &&	opsao="$1"
+		[[ "$opsao" = "y" || "$opsao" = "Y" ]] &&	return 0
+		[[ "$opsao" = "p" || "$opsao" = "P" ]] &&	return 1
+		exit 1
+	fi
+}
+function arqCheck { # [saida:n ou y] [nome_arq] [caminho_arq]
+	if ! [ -r "$3/$2" ]; then
+		[[ "$1" = "y" ]] &&	return 1
+		SIG err "ERRO" "$2" "arquivo não existe"
+	else
+		[[ "$1" = "y" ]] &&	return 0
+	fi
+}
+function listagem { # [endereço] [n.letras] [comparador] [comando]
+	for ARQ in $( ls $1/ )
+        do
+        i="$1/$ARQ"
+        if [ -f $i ]; then
+            last=$((${#i}-$2))
+            if [ "${i:$last:$2}" = "$3" ] ;
+            then
+				eval $4
+            fi
+        fi
+    done
+}
+function my_export {
+	export -f fixx
+	export -f SIG
+	export -f mySudo
+	export -f continuo
+	export -f arqCheck
+	export -f listagem
+	export -f pre_teste
+}
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ address_sources="/etc/apt/sources.list.d" #"/media/butt/Arquivos/Scripts/Ferramentas/source" #
+ address_sources_debianList="$address_sources/debian.list"
+ address_ferra="/media/butt/Arquivos/Scripts/Ferramentas"
+ address_fstab="/etc/fstab" #"/media/butt/Arquivos/Scripts/Ferramentas/fstab" #
+ address_autostart="/home/butt/.config/autostart"
+ address_autostart_aqui="./autostart"
+ address_deb="/media/butt/backup/apt_install_.deb"
+
+ bin_local="/usr/local/sbin" #"/media/butt/Arquivos/Scripts/Ferramentas/sbin" #
+ script_apps=( "lockOn" "wakeOn" "s_ocr_img" "s_myMedia" "mytriggercmdagent" )
+ script_install=( "Install.tailscale" "Install.docker" )
+ script_servic=( "Service.Wake-on-lan" "Service.TriggerCMD" "Service.Docker" )
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+my_export
+sudo echo -e "\n"
+if [ "$1" = "" ];then
+	SIG whi ">>" "Instalação automatica." "Insira o padrao "
+	SIG n "y/n/p/no_ask"
+	SIG n "Padrao:n" "?"
+	read -t15 -n6 padrao ;[ -z "$padrao" ] &&	padrao="n"
+else
+	padrao="$1"
+fi
+export padrao
+
+#----------------------------------------------------------------------------
+# Criando arquivo /etc/apt/sources.list.d/debian.list  caso nao exista
+if ! [ -a "$address_sources_debianList" ]; then
+	sudo touch "$address_sources_debianList"
+fi
+
+#----------------------------------------------------------------------------
+# Adicionando Varios repositorios. Abre o arquivo para conferir.
+SIG whi ".." "Verificação de Repositorios.."
+if continuo $padrao;then
+	(debian_sources | sudo tee -a $address_sources_debianList)
+	sleep 2
+	fixx
+
+	[[ "$padrao" != "no_ask" ]] &&	\
+	mySudo	"nano $address_sources_debianList" \
+			"nano" \
+			"Adicionando '$address_sources_debianList'" \
+			"'$address_sources_debianList' OK!" \
+			"ao abrir '$address_sources_debianList'"
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Iniciando Update.
+	mySudo	"apt-get update" \
+			"Update" \
+			"Verificando Repositorios .." \
+			"Repositorio OK!" \
+			"de Repositorio\n" \
+			"exit 1" # [tipo/comando] [app] [msgm_pre] [msgm_pos] [msgm_erro] [comando erro]
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Iniciando Atualização..
+	mySudo	"apt-get dist-upgrade -y" \
+			"dist-upgrade" \
+			"Iniciando Atualização..\n" \
+			"Atualizacao OK!" \
+			"de Atualizacao.\n" \
+			"exit 1" # [tipo/comando] [app] [msgm_pre] [msgm_pos] [msgm_erro] [comando erro]
+	fixx
+fi
+
+#----------------------------------------------------------------------------
+SIG whi ".." "Alterando '$address_fstab' .."
+if continuo $padrao;then
+	(fstab_etc | sudo tee -a $address_fstab)
+	sleep 2
+	[[ "$padrao" != "no_ask" ]] &&	\
+	mySudo	"nano '$address_fstab'" \
+			"nano" \
+			"Adicionando a '$address_fstab'" \
+			"'$address_fstab' OK!" \
+			"ao abrir '$address_fstabt'"
+fi
+#----------------------------------------------------------------------------
+SIG whi ".." "Instalando Apps.."
+SIG whi ".." "Instalando Ferramentas Administrativas..\n"
+if continuo $padrao;then
+	mySudo "apt" "gh" #pip-mySudoernet-tools
+	mySudo "apt" "python3-pip" #pip-mySudoernet-tools
+	mySudo "apt" "net-tools"	# internet tools
+	mySudo "apt" "ethtool"
+	mySudo "apt" "lm-sensors"	# Sensores
+	mySudo "apt" "gparted" 	# Gerencia Discos
+	mySudo "apt" "gpart" 	# Axiliar ao Gparted na recuperação de daos
+	mySudo "apt" "kbackup"		#KDE Backup
+	mySudo "apt" "deja-dup"		#BackUp
+	mySudo "apt" "grub-customizer" #customizar a inicialização
+	mySudo "apt" "stacer"		#Limpesa de disco
+	mySudo "apt" "kdeconnect" 	#KDE complemento
+	mySudo "apt" "clamav" 		#Antivirus
+	mySudo "apt" "curl"
+	mySudo "apt" "nodejs"
+	mySudo "apt" "wget"
+	mySudo "pip" "pyftpdlib"
+	mySudo "apt" "ffmpeg libgdk-pixbuf-xlib-2.0-0 libgdk-pixbuf2.0-0 libgdk-pixbuf2.0-0"
+
+	SIG whi ".." "Instalação de Ferramentas Administrativas Finalizada!!"
+fi
+
+#----------------------------------------------------------------------------
+SIG whi ".." "Instalando Ferramentas de  Escritorio..\n"
+if continuo $padrao ;then
+	mySudo "apt" "kolourpaint"		#Paint
+	mySudo "apt" "krita" 			#Paint Avancado
+	mySudo "apt" "tesseract-ocr" 	#OCR imagens
+	mySudo "apt" "ocrmypdf" 		#OCR pdf
+	mySudo "apt" "tesseract-ocr-por tesseract-ocr-eng" #portugues pra ocr, osd, all
+	mySudo "apt" "virtualbox" 		#Maquina virtual
+	mySudo "apt" "qemu-kvm"	#lib para virt-manager
+	mySudo "apt" "libvirt-clients"	#lib para virt-manager
+	mySudo "apt" "libvirt-daemon-system"	#lib para virt-manager
+	mySudo "apt" "bridge-utils"	#lib para virt-manager
+	sudo adduser $USER libvirt && sudo adduser $USER kvm
+	mySudo "apt" "virt-manager" # VM
+	mySudo "apt" "krdc" 		# acesso remoto
+	mySudo "apt" "mkisofs"
+	mySudo "apt" "flameshot" 	#print screen
+	mySudo "apt" "mousepad"		#Editor texto
+	mySudo "apt" "cherrytree" 	#Organizador
+	mySudo "apt" "webcamoid" 	#Webcam
+	mySudo "apt" "libreoffice"	#office
+
+	SIG whi ".." "Instalação de Ferramentas de  Escritorio Finalizada!!"
+fi
+
+#----------------------------------------------------------------------------
+SIG whi ".." "Instalando App AnyDesk.."
+if continuo $padrao;then #http://deb.anydesk.com/howto.html
+	if continuo $padrao "Adicionar repositorio";then
+		comando="( wget -qO - https://keys.anydesk.com/repos/DEB-GPG-KEY | sudo apt-key add - )"
+		mySudo	$comando \
+				"AnyDesk" \
+				"Instalando" \
+				"Instalado com Sucesso!\n" \
+				"na chave do Repositorio."	# [tipo/comando] [app] [msgm_pre] [msgm_pos] [msgm_erro] [comando erro]
+		mySudo	"apt-get" "update"
+	fi
+	if continuo $padrao "Adicionar Anydesk";then	mySudo "apt" "anydesk"; fi
+fi
+#----------------------------------------------------------------------------
+# Endereço de ferramentas. Deve acontecer ANTES dos Scripts
+SIG whi ".." "Scripts Install .."
+	SIG whi ".." "Endereço das ferramentas" "Padrao: $address_ferra "
+	SIG whi ">>" "Insira outro endereço ou continue:"
+	read
+	[ -z "$address_ferra_ok" ] &&	address_ferra_ok="$address_ferra"
+
+	SIG whi ".." "Endereço de Inserção" "Padrao: $bin_local "
+	SIG whi ">>" "Insira outro endereço ou continue:"
+	read bin_local_ok
+	[ -z "$bin_local_ok" ] &&	bin_local_ok="$bin_local"
+
+#----------------------------------------------------------------------------
+SIG whi ".." "Copiando Ferramentas para '$bin_local_ok'"
+if continuo $padrao;then
+	#listagem [endereço] [n.letras] [comparador] [comando]
+	for nomeApp in "${script_apps[@]}";	do
+		if arqCheck "y" $nomeApp $address_ferra_ok; then
+			mySudo	"cp $address_ferra_ok/$nomeApp $bin_local_ok/$nomeApp" \
+					"$nomeApp" \
+					"Copiando" \
+					"Copia Finalizada." \
+					"na copia de ''$nomeApp'"
+		fi
+	done
+	sleep 2
+	[[ "$padrao" != "no_ask" ]] &&	dolphin "$address_ferra"
+fi
+
+#----------------------------------------------------------------------------
+# Deve acontecer ANTES dos .deb
+SIG whi ".." "Instalando Scripts de Instalação .."
+if continuo $padrao;then
+	for nomeApp in "${script_install[@]}";	do
+		if arqCheck "y" $nomeApp "."; then
+			mySudo	"bash ./$nomeApp" \
+					"$nomeApp" \
+					"Executando" \
+					"Execução Finalizada."
+					"na execução de '$nomeApp'"
+		fi
+	done
+	sleep 2
+	[[ "$padrao" != "no_ask" ]] &&	dolphin "$bin_local"
+fi
+
+#----------------------------------------------------------------------------
+# Deve acontecer DEPOIS dos Scripts
+SIG whi ".." "Instalando Locais '.deb' .."
+if continuo $padrao;then
+	SIG whi ".." "Endereço do Local: " "Padrao: $address_deb"
+	SIG whi ">>" "Insira outro endereço ou continue:"
+	read address_deb_new
+	[ -z "$address_deb_new" ] &&	address_deb_new="$address_deb"
+
+    if ! ( ls "$address_deb_new/" > '/dev/null' );then
+        SIG "err"; echo -en " no diretorio \e[1;37m$address_deb_new\e[0m"
+        exit
+	fi
+	listagem "$address_deb_new" 4 ".deb" "mySudo 'dpkg' '$i'"
+fi
+
+SIG whi ".." "Fixx Install .."
+if continuo $padrao;then
+	fixx
+fi
+
+#----------------------------------------------------------------------------
+# Deve acontecer ANTES dos .deb
+SIG whi ".." "Instalando Scripts de Servicos .."
+if continuo $padrao;then
+	for nomeApp in "${script_service[@]}";	do
+		if arqCheck "y" $nomeApp $address_ferra_ok; then
+			mySudo	"bash $address_ferra_ok/$nomeApp" \
+					"$nomeApp" \
+					"Executando" \
+					"Execução Finalizada." \
+					"na execução de '$nomeApp'"
+		fi
+	done
+	sleep 2
+	[[ "$padrao" != "no_ask" ]] &&	dolphin "$bin_local"
+fi
+
+#----------------------------------------------------------------------------
+SIG whi ".." "Inserindo inicializações Automáticas '$address_fstab' .."
+if continuo $padrao;then
+	listagem "$address_autostart_aqui" 8 ".desktop" "mySudo 'cp $address_autostart_aqui/$i $address_autostart/$i' '$i' 'Copiando' 'Copia Finalizada.'"
+
+    sleep 2
+	[[ "$padrao" != "no_ask" ]] &&	dolphin "$address_autostart"
+fi
+
+SIG whi ".." "Fim da Inicializações Automática"

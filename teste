@@ -1,0 +1,84 @@
+#!/bin/bash
+function SIG { #cor] [simbolo] [msgm1] [msgm2]
+	end="\e[0m" ; bef="\n\e[1;34m[$end" ; aft="\e[1;34m]$end"
+	case $1 in
+		"err") cor="\e[1;31;1m" ;;
+		"red") cor="\e[1;31;1m" ;;
+		"gre") cor="\e[1;32;1m" ;;
+		"pur") cor="\e[1;35;1m" ;;
+		"whi") cor="\e[1;37;1m" ;;
+		*)	   bef="\e[1;34m[$end\e[1;37;1m"
+	esac
+	if [ "$1" = "err" ];then
+		echo -en "$bef$cor$2$end$aft\e[5;31m $3$end\e[1;37m $4$end"
+	else
+		echo -en "$bef$cor$2$end$aft\e[1;37m $3$end $4"
+	fi
+}
+function mySudo { #[tipo] [app] [msgm_pre] [msgm_pos]
+	msmg_sucess="Instalado com Sucesso!\n"
+	case $1 in
+		"dpkg") do_it="dpkg -i $2"; 		acao="Instalando"; re_acao="$msmg_sucess" ;;
+		"apt") do_it="apt install -y $2";	acao="Instalando"; re_acao="$msmg_sucess" ;;
+		"pip") do_it="pip install $2";		acao="Instalando"; re_acao="$msmg_sucess" ;;
+		*)	   do_it="$1"
+				[ -n "$2" ] && acao="$2"
+				[ -n "$3" ] && re_acao="$3"
+	esac
+	if [ -n "$acao" ]; then
+		SIG whi ".." "$acao";SIG n "$2" ":\n";
+	fi
+	if ! sudo $do_it;then
+		SIG err "ERRO" "\n" ;	continuo $padrao
+	else
+		if [ -n "$re_acao" ] ; then
+			#tput dl1;tput cuu1;
+			SIG gre "+" "$re_acao"
+		fi
+	fi
+}
+function continuo { # [no_ask or padrao] [msgm]
+	if [ "$1" != "no_ask" ];then
+		msgm="$2";[ -z "$2" ] &&	msgm="Continuar"
+		SIG whi ">>" "$msgm" ; SIG n "y/n/pular" "Padrao:$1 ?"
+		read -t15 -n1 opsao
+		[ -z "$opsao" ] &&	opsao="$1"
+		[[ "$opsao" = "y" || "$opsao" = "Y" ]] &&	return 0
+		[[ "$opsao" = "p" || "$opsao" = "P" ]] &&	return 1
+		exit 1
+	fi
+}
+function arqCheck { # [saida:n ou y] [nome_arq] [caminho_arq]
+	if ! [ -r "$3/$2" ]; then
+		[[ "$1" = "y" ]] &&	return 1
+		SIG err "ERRO" "$2" "arquivo não existe"
+	else
+		[[ "$1" = "y" ]] &&	return 0
+	fi
+}
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ address_sources="/media/butt/Arquivos/Scripts/Linux_Install/autostart" #"/etc/apt/sources.list.d"
+ address_sources_debianList="$address_sources/debian.list"
+ address_ferra="/media/butt/Arquivos/Scripts/Ferramentas"
+ bin_local="/media/butt/Arquivos/Scripts/Ferramentas/sbin" #"/usr/local/sbin"
+ address_fstab="/media/butt/Arquivos/Scripts/Ferramentas/fstab" #"/etc/fstab"
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+script_apps=( "teste" "s_install_linux" )
+
+function listagem { # [endereço] [n.letras] [comparador] [comando]
+	for ARQ in $( ls $1/ )
+        do
+        i="$1/$ARQ"
+        if [ -f $i ];
+        then
+            last=$((${#i}-$2))
+            if [ "${i:$last:$2}" = "$3" ] ;
+            then
+				eval $4
+            fi
+        fi
+    done
+}
+listagem "$address_sources" 8 ".desktop" "mySudo echo Ok"
+
+

@@ -1,0 +1,43 @@
+#!/bin/bash
+padrao_sem $1
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ address_keyrings="/etc/apt/keyrings"
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ SIG whi ".." "Instalando Componentes Docker-Desktop .."
+#[tipo/comando] [app] [msgm_pre] [msgm_pos] [msgm_erro] [comando erro]
+mySudo "apt" ca-certificates
+mySudo "apt" gnupg
+mySudo "apt" lsb-release
+sudo mkdir -p "$address_keyrings"
+comando="( curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg )"
+	if ! eval $comando;then
+			SIG err "ERRO";echo -en "na chave do Repositorio Docker."
+	elif ! sudo apt-get update;then
+			SIG err "ERRO" "no update.";
+			continuo $padrao
+	fi
+mySudo "apt" "docker-ce"
+mySudo "apt" "docker-ce-cli"
+mySudo "apt" "containerd.io"
+mySudo "apt" "docker-compose-plugin"
+mySudo "apt" "docker-compose"
+mySudo "apt" "docker-engine"
+mySudo "apt" "docker.io-doc"
+mySudo "apt" "docker-doc"
+mySudo "apt" "docker.io"
+mySudo "apt" "docker-desktop"
+mySudo "apt" "docker-ce-rootless-extras"
+mySudo "apt" "docker"
+mySudo "apt" "docker-clean"
+mySudo "apt" "docker-scan-plugin"
+mySudo "apt" "docker-engine-cs"
+mySudo "apt" "docker-registry"
+
+
+#docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+#-----falta
+#gpg --generate-key
+#/home/butt/.password-store/
